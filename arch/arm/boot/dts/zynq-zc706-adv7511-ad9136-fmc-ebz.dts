@@ -1,0 +1,100 @@
+/dts-v1/;
+
+/include/ "zynq-zc706.dtsi"
+/include/ "zynq-zc706-adv7511.dtsi"
+
+&i2c_mux {
+	i2c@5 { /* HPC IIC */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <5>;
+
+		eeprom@50 {
+			compatible = "at24,24c02";
+			reg = <0x50>;
+		};
+
+		eeprom@54 {
+			compatible = "at24,24c02";
+			reg = <0x54>;
+		};
+	};
+};
+
+
+&fpga_axi {
+	tx_dma: dma@7c420000 {
+		compatible = "adi,axi-dmac-1.00.a";
+		reg = <0x7c420000 0x10000>;
+
+		interrupts = <0 56 0>;
+		clocks = <&clkc 16>;
+
+		#dma-cells = <1>;
+
+		dma-channel {
+			adi,source-bus-width = <64>;
+			adi,destination-bus-width = <256>;
+			adi,type = <1>;
+			adi,cyclic;
+		};
+	};
+
+	jesd204_tpl: jesd204-transport-layer@44a04000 {
+		compatible = "adi,axi-ad9136-1.0";
+		reg = <0x44a04000 0x4000>;
+
+		dmas = <&tx_dma 0>;
+		dma-names = "tx";
+
+		spibus-connected = <&ad9136>;
+		adi,axi-pl-fifo-enable;
+	};
+
+	jesd204_link: jesd204-link-layer@44a90000 {
+		compatible = "adi,axi-jesd204-tx-1.0";
+		reg = <0x44a90000 0x1000>;
+
+		interrupts = <0 54 0>;
+
+		clocks = <&clkc 16>, <&ad9516 9>, <&jesd204_phy 0>;
+		clock-names = "s_axi_aclk", "device_clk", "lane_clk";
+
+		adi,octets-per-frame = <1>;
+		adi,frames-per-multiframe = <32>;
+		adi,converter-resolution = <16>;
+		adi,bits-per-sample = <16>;
+		adi,converters-per-device = <2>;
+
+		#clock-cells = <0>;
+		clock-output-names = "jesd_dac_lane_clk";
+	};
+
+	jesd204_phy: jesd204-phy@44a60000 {
+		compatible = "adi,axi-adxcvr-1.0";
+		reg = <0x44a60000 0x1000>;
+
+		clocks = <&ad9516 9>, <&ad9516 9>;
+		clock-names = "conv", "div40";
+
+		#clock-cells = <1>;
+		clock-output-names = "dac_gt_clk", "tx_out_clk";
+
+		adi,sys-clk-select = <3>;
+		adi,out-clk-select = <4>;
+		adi,use-lpm-enable;
+//		adi,use-cpll-enable;
+	};
+};
+
+&spi0 {
+	status = "okay";
+};
+
+#define fmc_spi spi0
+
+#include "adi-ad9136-fmc-ebz.dtsi"
+
+&ad9136 {
+	txen-gpios = <&gpio0 86 0>, <&gpio0 87 0>;
+};
