@@ -4,6 +4,13 @@
 
 menu "Misc devices"
 
+config AXI_FPGA_STREAM
+	tristate "High speed data streaming interface to AXI connected FPGA"
+	default n
+	help
+	  This driver stream daat to/from an FPGA connected to the processor
+	  VIA an AXI style interface.
+
 config SENSORS_LIS3LV02D
 	tristate
 	depends on INPUT
